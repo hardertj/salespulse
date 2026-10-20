@@ -21,6 +21,7 @@ from data_pipeline import (
     compute_kpi_summary,
     filter_sales_data,
     generate_sales_dataset,
+    simulate_pricing_scenario,
 )
 
 # --- 1. PAGE CONFIGURATION ---
@@ -147,6 +148,54 @@ kpi4.metric(
 )
 
 st.divider()
+
+# --- WHAT-IF PRICING SIMULATOR (UI Component) ---
+with st.expander("🎯 Interactive What-If Scenario Simulator", expanded=False):
+    st.caption("Model the financial impact of strategic pricing adjustments and discount cuts.")
+
+    # 1. Sliders for adjustments:
+    sim_col1, sim_col2 = st.columns(2)
+    with sim_col1:
+        price_adj = st.slider("Base Price Adjustment (%)", min_value=-20.0, max_value=20.0, value=0.0, step=0.5)
+    with sim_col2:
+        disc_adj = st.slider("Discount Reduction (Points)", min_value=-15.0, max_value=15.0, value=0.0, step=0.5)
+
+    # 2. Call your domain function:
+    # Remember to import simulate_pricing_scenario at the top of app.py!
+    # df_sim = simulate_pricing_scenario(df_filtered, price_change_pct=price_adj, discount_change_pct=-disc_adj)
+    df_sim = simulate_pricing_scenario(df_filtered, price_change_pct= price_adj, discount_change_pct=-disc_adj)
+    
+    # 3. Calculate simulated totals and deltas:
+    sim_rev = df_sim["sim_sales"].sum()
+    sim_prof = df_sim["sim_profit"].sum()
+    sim_margin = (sim_prof / sim_rev * 100) if sim_rev > 0 else 0.0
+
+    # 4. Render 3 columns comparing Baseline vs. Simulated:
+    # - Metric 1: Projected Revenue (with delta against kpi.total_revenue)   
+    # - Metric 2: Projected Profit (with delta against kpi.total_profit)
+    # - Metric 3: Projected Margin % (with delta against kpi.avg_profit_margin)  
+    sim_m1, sim_m2, sim_m3 = st.columns(3)
+    rev_diff = sim_rev - kpi.total_revenue
+    prof_diff = sim_prof - kpi.total_profit
+    margin_diff = sim_margin - kpi.avg_profit_margin
+
+    sim_m1.metric(
+        label="Projected Revenue",
+        value=f"${sim_rev:,.2f}",
+        delta=f"${rev_diff:+,.2f} ({rev_diff / kpi.total_revenue * 100:+.1f}%)" if kpi.total_revenue > 0 else None,
+    )  
+
+    sim_m2.metric(
+        label="Projected Profit",
+        value=f"${sim_prof:,.2f}",
+        delta=f"${prof_diff:+,.2f} ({prof_diff / kpi.total_profit * 100:+.1f}%)" if kpi.total_profit > 0 else None
+    )
+
+    sim_m3.metric(
+        label="Projected Margin",
+        value=f"{sim_margin:.1f}%",
+        delta=f"{margin_diff:+.1f} pts",
+    )
 
 # --- ROW 2: TIME-SERIES TRENDS & REGIONAL BREAKDOWN ---
 col_trend, col_region = st.columns([2, 1])

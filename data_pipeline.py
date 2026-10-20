@@ -210,3 +210,56 @@ def aggregate_by_region(df: pd.DataFrame) -> pd.DataFrame:
         .agg(total_sales=("sales", "sum"), total_profit=("profit", "sum"))
         .sort_values(by="total_sales", ascending=True)
     )
+
+def simulate_pricing_scenario(
+        df: pd.DataFrame, 
+        price_change_pct: float = 0.0,
+        discount_change_pct: float = 0.0
+) -> pd.DataFrame:
+    """Simulate the financial impact of price and discount adjustments.
+    
+    Args:
+        df: the filtered or master transactions DataFrame.
+        price_change_pct: Percentage to increase/decrease base price (e.g., +5.0 for +5%).
+        discount_change_pct: Percentage points to adjust discount (e.g., -2.0 to reduce discount by 2%).
+        
+    Returns:
+        A new DataFrame with simulated columns: 'sim_sales', 'sim_profit', and 'sim_margin_pct'.
+    """
+
+    # 1. Start with a copy of the dataframe so we don't mutate the original! 
+    sim_df = df.copy()
+
+    # 2. Derive the original unit price betfore discount:
+    # original sales = unit_price * quantity * (1 - discount_pct / 100)
+    # Therefore: gross_sales = sales / (1 - discount_pct / 100)
+    # Hint: Watch out for division by zero if discount is 100%!
+    # Calculate the original gross sales or effective unit price
+    sim_df["gross_sales"] = sim_df["sales"] / np.where(sim_df['discount_pct'] < 100, ( 1 - sim_df['discount_pct'] / 100), 1)
+
+    # 3. Apply the price change:
+    # new_gross_sales = gross_sales * (1 + price_change_pct / 100)
+    sim_df["new_gross_sales"] = sim_df["gross_sales"] * (1 + price_change_pct / 100)    
+
+    # 4. Calculate new discount percentage:
+    # new_discount_pct = np.clip(sim_df['discount_pct'] + discount_change_pct, 0.0, 100.0)
+    # TODO: Calculate new_discount_pct
+    sim_df["new_discount_pct"] = np.clip(sim_df["discount_pct"] + discount_change_pct, 0.0, 100.0)
+
+    # 5. Calculate simulated sales:
+    # sim_sales = new_gross_sales * (1 - new_discount_pct / 100)
+    sim_df["sim_sales"] = sim_df["new_gross_sales"] * ( 1 - sim_df["new_discount_pct"] / 100)
+
+    # 6. Keep original product cost constant, then calculate simulated profit:
+    # original_cost = sim_df['sales'] - sim_df['profit']
+    # sim_df["sim_profit"] = sim_df["sim_sales"] - original_cost
+    sim_df["sim_profit"] = sim_df["sim_sales"] - (sim_df["sales"] - sim_df["profit"])
+
+    # 7. Calculate simulated profit margin %:
+    # sim_df["sim_margin_pct"] = (sim_df["sim_profit"] / sim_df["sim_sales"]) * 100
+    # TODO: Calculate sim_margin_pct
+    sim_df["sim_margin_pct"] = np.where(
+        sim_df["sim_sales"] > 0,
+        (sim_df["sim_profit"] / sim_df["sim_sales"]) * 100, 0.0)
+
+    return sim_df
