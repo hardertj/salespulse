@@ -2,6 +2,9 @@
 
 SalesPulse is a production-grade retail data analytics dashboard built with **Python**, **Streamlit**, **Pandas**, and **Plotly**. It demonstrates the **Data Pipeline Pattern**, high-performance memory caching via `@st.cache_data`, and interactive visual analytics.
 
+> [!NOTE]
+> 📚 **Complete Learning Journal Available**: Detailed data engineering patterns, vectorization explanations, defensive math derivations, and session notes are documented in [`docs/LEARNING_JOURNAL.md`](docs/LEARNING_JOURNAL.md).
+
 ---
 
 ## 🏗️ Architecture
